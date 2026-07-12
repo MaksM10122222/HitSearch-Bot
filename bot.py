@@ -1222,9 +1222,13 @@ async def main():
             print(f"❌ Ошибка БД: {e}")
     
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).request(request).build()
+    
+    # Команды
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("mystats", mystats_command))
     app.add_handler(CommandHandler("unhide", admin_hide_unhide_command))
+    
+    # Callback handlers
     app.add_handler(CallbackQueryHandler(main_menu, pattern="^main_menu$"))
     app.add_handler(CallbackQueryHandler(search_menu, pattern="^search_menu$"))
     app.add_handler(CallbackQueryHandler(search_type_handler, pattern="^type_"))
@@ -1242,12 +1246,17 @@ async def main():
     app.add_handler(CallbackQueryHandler(admin_stats, pattern="^admin_stats$"))
     app.add_handler(CallbackQueryHandler(username_platform_callback, pattern="^username_"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("✅ Бот запущен!")
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling(drop_pending_updates=True)
-    while True:
-        await asyncio.sleep(3600)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    
+    # ============= ЗАПУСК ЧЕРЕЗ WEBHOOK =============
+    port = int(os.environ.get("PORT", 10000))
+    webhook_url = f"https://{os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'localhost')}/{TELEGRAM_BOT_TOKEN}"
+    
+    await app.bot.set_webhook(url=webhook_url)
+    print(f"✅ Webhook установлен: {webhook_url}")
+    
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=TELEGRAM_BOT_TOKEN,
+        webhook_url=webhook_url,
+    )
